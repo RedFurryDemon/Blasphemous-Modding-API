@@ -45,55 +45,61 @@ namespace Modding
             }
 
             Logger.API.LogInfo("===============BEGINNING PRE-INITIALIZATION===============");
-
-            // Iterate over all dll files in mods folder
-            foreach (string modFileName in Directory.GetFiles(path, "*.dll"))
-            {
-                Logger.API.LogDebug("Loading mods from file " + modFileName);
-
                 try
                 {
-                    foreach (Type type in Assembly.LoadFile(modFileName).GetExportedTypes())
-                    {
-                        if (!type.IsSubclassOf(typeof(Mod)))
-                        {
-                            continue;
-                        }
+					// Iterate over all dll files in mods folder
+					foreach (string modFileName in Directory.GetFiles(path, "*.dll"))
+					{
+						Logger.API.LogDebug("Loading mods from file " + modFileName);
 
-                        // Check for a paramaterless contructor on any found mods
-                        ConstructorInfo ctor = type.GetConstructor(new Type[0]);
+						try
+						{
+							foreach (Type type in Assembly.LoadFile(modFileName).GetExportedTypes())
+							{
+								if (!type.IsSubclassOf(typeof(Mod)))
+								{
+									continue;
+								}
 
-                        if (ctor == null)
-                        {
-                            Logger.API.LogWarn(
-                                $"Mod {type.Name} contains no parameterless constructor and cannot be loaded");
-                            continue;
-                        }
+								// Check for a paramaterless contructor on any found mods
+								ConstructorInfo ctor = type.GetConstructor(new Type[0]);
 
-                        Mod mod = (Mod)ctor.Invoke(new object[0]);
+								if (ctor == null)
+								{
+									Logger.API.LogWarn(
+										$"Mod {type.Name} contains no parameterless constructor and cannot be loaded");
+									continue;
+								}
 
-                        // Ensure that mods have unique IDs
-                        string id = mod.GetModID();
-                        if (LoadedMods.ContainsKey(id))
-                        {
-                            Logger.API.LogWarn($"Duplicate mod ID \"{id}\", skipping");
-                            continue;
-                        }
+								Mod mod = (Mod)ctor.Invoke(new object[0]);
 
-                        // Attempt to load the mod
-                        mod.PreInitialize();
-                        LoadedMods[id] = mod;
+								// Ensure that mods have unique IDs
+								string id = mod.GetModID();
+								if (LoadedMods.ContainsKey(id))
+								{
+									Logger.API.LogWarn($"Duplicate mod ID \"{id}\", skipping");
+									continue;
+								}
 
-                        Logger.API.LogInfo($"Mod {id} pre-initialization complete");
-                    }
-                }
-                catch (Exception e)
+								// Attempt to load the mod
+								mod.PreInitialize();
+								LoadedMods[id] = mod;
+
+								Logger.API.LogInfo($"Mod {id} pre-initialization complete");
+							}
+						}
+						catch (Exception e)
+						{
+							Logger.API.LogError($"Error loading mods from file \"{modFileName}\":\n{e}");
+						}
+					}
+				Loaded = true;
+				}
+               catch (Exception e)
                 {
-                    Logger.API.LogError($"Error loading mods from file \"{modFileName}\":\n{e}");
+                    Logger.API.LogError($"Error loading Modding API:\n{e}");
+					// TO-DO for later: folder "Mods" is automatically created in "Output" even if it's empty
                 }
-            }
-
-            Loaded = true;
         }
 
         public static void InitializeMods()
